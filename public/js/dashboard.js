@@ -162,41 +162,8 @@ function initializeTerminal() {
   // Buffer for current line input
   let currentLine = '';
 
-  // Handle key input in terminal
-  term.onData(data => {
-    if (!currentTerminal) return;
-
-    // Handle special keys
-    if (data === '\r') {
-      // Enter key - send command
-      term.write('\r\n');
-      if (currentLine.trim()) {
-        socket.emit('send-command', {
-          terminalId: currentTerminal,
-          command: currentLine
-        });
-      }
-      currentLine = '';
-    } else if (data === '\u007F') {
-      // Backspace
-      if (currentLine.length > 0) {
-        currentLine = currentLine.slice(0, -1);
-        term.write('\b \b');
-      }
-    } else if (data === '\u0003') {
-      // Ctrl+C
-      socket.emit('send-command', {
-        terminalId: currentTerminal,
-        command: '\u0003'
-      });
-      currentLine = '';
-      term.write('^C\r\n');
-    } else {
-      // Regular character
-      currentLine += data;
-      term.write(data);
-    }
-  });
+  // Handle key input in terminal - disabled, use bottom input instead
+  // Users should use the command input field at the bottom
 
   // Handle terminal resize
   window.addEventListener('resize', () => {
@@ -224,9 +191,19 @@ function sendCommand() {
 // Event listeners
 document.getElementById('sendBtn').addEventListener('click', sendCommand);
 
-document.getElementById('commandInput').addEventListener('keypress', (e) => {
+document.getElementById('commandInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
+    e.preventDefault();
     sendCommand();
+  } else if (e.key === 'Tab') {
+    e.preventDefault();
+    // Auto-complete could be added here in the future
+    // For now, just insert tab character (useful for some commands)
+    const input = e.target;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    input.value = input.value.substring(0, start) + '\t' + input.value.substring(end);
+    input.selectionStart = input.selectionEnd = start + 1;
   }
 });
 

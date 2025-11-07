@@ -344,6 +344,7 @@ body {
   display: flex;
   flex-direction: column;
   padding: 20px;
+  padding-bottom: 80px; /* Space for fixed input at bottom */
 }
 
 .terminal-header {
@@ -388,9 +389,17 @@ body {
 }
 
 .terminal-input {
-  margin-top: 15px;
+  position: fixed;
+  bottom: 0;
+  left: 280px;
+  right: 0;
+  margin: 0;
+  padding: 15px 20px;
+  background: var(--dark-bg);
+  border-top: 1px solid var(--border-color);
   display: flex;
   gap: 10px;
+  z-index: 100;
 }
 
 .terminal-input input {
@@ -400,7 +409,8 @@ body {
   border-radius: 5px;
   background: var(--light-bg);
   color: var(--text-primary);
-  font-family: monospace;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 14px;
 }
 
 /* Admin Tabs */
@@ -659,5 +669,9 @@ body {
 
   .terminal-actions .btn {
     flex: 1;
+  }
+
+  .terminal-input {
+    left: 0;
   }
 }
