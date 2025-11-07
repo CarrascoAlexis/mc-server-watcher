@@ -21,6 +21,7 @@
         <ul class="admin-nav">
           <li><a href="#" class="active" data-tab="users">👥 Users</a></li>
           <li><a href="#" data-tab="terminals">🖥️ Terminals</a></li>
+          <li><a href="#" data-tab="startup">🚀 Startup Tasks</a></li>
         </ul>
       </nav>
 
@@ -75,6 +76,39 @@
           <div id="terminalsConfigList" class="config-list">
             <!-- Terminals config will be loaded here -->
           </div>
+        </div>
+      </div>
+
+      <!-- Startup Tasks Tab -->
+      <div id="startupTab" class="admin-tab">
+        <div class="tab-header">
+          <h2>Startup Tasks Management</h2>
+          <div style="display: flex; gap: 10px;">
+            <button id="createStartupTaskBtn" class="btn btn-primary">+ Create Task</button>
+            <button id="reloadStartupTasksBtn" class="btn btn-secondary">↻ Reload</button>
+          </div>
+        </div>
+
+        <div class="info-message">
+          ℹ️ Manage tasks that run automatically when the system starts. These tasks are configured as systemd services (Linux only).
+        </div>
+
+        <div class="startup-tasks-list">
+          <table id="startupTasksTable" class="data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Command</th>
+                <th>Working Directory</th>
+                <th>Auto-Start</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Startup tasks will be loaded here -->
+            </tbody>
+          </table>
         </div>
       </div>
     </main>
@@ -179,6 +213,70 @@
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" id="cancelTerminalBtn">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Terminal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Create/Edit Startup Task Modal -->
+  <div id="startupTaskModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="startupTaskModalTitle">Create Startup Task</h3>
+        <button class="modal-close" id="closeStartupTaskModal">&times;</button>
+      </div>
+
+      <form id="startupTaskForm" class="modal-form">
+        <input type="hidden" id="startupTaskEditId">
+
+        <div class="form-group">
+          <label for="taskName">Task Name * (systemd service name)</label>
+          <input type="text" id="taskName" required placeholder="minecraft-server">
+          <small>Lowercase, no spaces (e.g., minecraft-server, backup-task)</small>
+        </div>
+
+        <div class="form-group">
+          <label for="taskDescription">Description</label>
+          <input type="text" id="taskDescription" placeholder="Minecraft server startup service">
+        </div>
+
+        <div class="form-group">
+          <label for="taskCommand">Command to Execute *</label>
+          <input type="text" id="taskCommand" required placeholder="java -Xmx4G -jar server.jar nogui">
+          <small>Full command line to execute</small>
+        </div>
+
+        <div class="form-group">
+          <label for="taskWorkDir">Working Directory *</label>
+          <input type="text" id="taskWorkDir" required placeholder="/home/minecraft/server">
+          <small>Absolute path where the command runs</small>
+        </div>
+
+        <div class="form-group">
+          <label for="taskUser">Run as User</label>
+          <input type="text" id="taskUser" placeholder="minecraft">
+          <small>Linux user to run the service (leave empty for current user)</small>
+        </div>
+
+        <div class="form-group">
+          <label for="taskRestartPolicy">Restart Policy</label>
+          <select id="taskRestartPolicy">
+            <option value="always">Always (restart on failure)</option>
+            <option value="on-failure">On Failure (only if crashes)</option>
+            <option value="no">No (don't restart)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="taskEnabled" checked>
+            Enable at system startup
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="cancelStartupTaskBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Task</button>
         </div>
       </form>
     </div>

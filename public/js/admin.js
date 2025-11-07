@@ -13,6 +13,8 @@ document.getElementById('currentUser').textContent = user.username;
 let allTerminals = [];
 let editingUserId = null;
 let editingTerminalIndex = null;
+let allStartupTasks = [];
+let editingStartupTaskId = null;
 
 // Tab switching
 document.querySelectorAll('.admin-nav a').forEach(link => {
@@ -454,12 +456,267 @@ document.getElementById('createTerminalBtn').addEventListener('click', showCreat
 document.getElementById('closeTerminalModal').addEventListener('click', closeTerminalModal);
 document.getElementById('cancelTerminalBtn').addEventListener('click', closeTerminalModal);
 
+// Startup Tasks Management
+async function loadStartupTasks() {
+  try {
+    const response = await fetch('/api/admin/startup-tasks', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to load startup tasks');
+    }
+
+    allStartupTasks = await response.json();
+    const tbody = document.querySelector('#startupTasksTable tbody');
+    tbody.innerHTML = '';
+
+    if (allStartupTasks.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">No startup tasks configured yet.</td></tr>';
+      return;
+    }
+
+    allStartupTasks.forEach((task, index) => {
+      const statusBadge = task.active 
+        ? '<span class="badge" style="background: #4CAF50;">Running</span>'
+        : '<span class="badge" style="background: #f44336;">Stopped</span>';
+      
+      const enabledBadge = task.enabled
+        ? '<span class="badge">Enabled</span>'
+        : '<span class="badge" style="background: #999;">Disabled</span>';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${task.name}</strong></td>
+        <td style="font-family: monospace; font-size: 12px;">${task.command}</td>
+        <td style="font-size: 12px;">${task.workingDirectory}</td>
+        <td>${enabledBadge}</td>
+        <td>${statusBadge}</td>
+        <td class="table-actions">
+          ${task.active 
+            ? `<button class="btn btn-small btn-danger" onclick="controlService('${task.name}', 'stop')">Stop</button>`
+            : `<button class="btn btn-small" style="background: #4CAF50; color: white;" onclick="controlService('${task.name}', 'start')">Start</button>`
+          }
+          <button class="btn btn-small btn-secondary" onclick="controlService('${task.name}', 'restart')">Restart</button>
+          <button class="btn btn-small btn-secondary" onclick="viewServiceFile('${task.name}', ${index})">View Config</button>
+          <button class="btn btn-small btn-secondary" onclick="editStartupTask(${index})">Edit</button>
+          <button class="btn btn-small btn-danger" onclick="deleteStartupTask(${index}, '${task.name}')">Delete</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (error) {
+    console.error('Load startup tasks error:', error);
+  }
+}
+
+function showCreateStartupTaskModal() {
+  editingStartupTaskId = null;
+  document.getElementById('startupTaskModalTitle').textContent = 'Create Startup Task';
+  document.getElementById('startupTaskForm').reset();
+  document.getElementById('startupTaskEditId').value = '';
+  document.getElementById('taskEnabled').checked = true;
+  document.getElementById('startupTaskModal').classList.add('active');
+}
+
+function editStartupTask(index) {
+  const task = allStartupTasks[index];
+  if (!task) return;
+
+  editingStartupTaskId = index;
+  document.getElementById('startupTaskModalTitle').textContent = 'Edit Startup Task';
+  document.getElementById('startupTaskEditId').value = index;
+  document.getElementById('taskName').value = task.name;
+  document.getElementById('taskDescription').value = task.description || '';
+  document.getElementById('taskCommand').value = task.command;
+  document.getElementById('taskWorkDir').value = task.workingDirectory;
+  document.getElementById('taskUser').value = task.user || '';
+  document.getElementById('taskRestartPolicy').value = task.restartPolicy || 'always';
+  document.getElementById('taskEnabled').checked = task.enabled !== false;
+
+  document.getElementById('startupTaskModal').classList.add('active');
+}
+
+async function deleteStartupTask(index, name) {
+  if (!confirm(`Are you sure you want to delete the startup task "${name}"?\n\nNote: This will not remove the systemd service. You need to manually run:\nsudo systemctl disable ${name}\nsudo systemctl stop ${name}\nsudo rm /etc/systemd/system/${name}.service`)) {
+    return;
+  }
+
+  try {
+    const updatedTasks = [...allStartupTasks];
+    updatedTasks.splice(index, 1);
+
+    const response = await fetch('/api/admin/startup-tasks', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(updatedTasks)
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      alert('Startup task deleted from configuration.\n\nRemember to manually remove the systemd service if needed.');
+      loadStartupTasks();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  } catch (error) {
+    console.error('Delete startup task error:', error);
+    alert('Failed to delete startup task');
+  }
+}
+
+function closeStartupTaskModal() {
+  document.getElementById('startupTaskModal').classList.remove('active');
+  document.getElementById('startupTaskForm').reset();
+  editingStartupTaskId = null;
+}
+
+async function controlService(serviceName, action) {
+  try {
+    const response = await fetch(`/api/admin/startup-tasks/${serviceName}/${action}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      alert(data.message || `Service ${action} successful`);
+      loadStartupTasks();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  } catch (error) {
+    console.error('Service control error:', error);
+    alert('Failed to control service. Make sure the app has sudo permissions.');
+  }
+}
+
+async function viewServiceFile(serviceName, index) {
+  const task = allStartupTasks[index];
+  if (!task) return;
+
+  try {
+    const response = await fetch('/api/admin/startup-tasks/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(task)
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      const message = `Systemd Service File for: ${serviceName}\n` +
+                     `Service Path: ${data.servicePath}\n\n` +
+                     `To install manually:\n` +
+                     `1. sudo nano ${data.servicePath}\n` +
+                     `2. Paste the content below\n` +
+                     `3. sudo systemctl daemon-reload\n` +
+                     `4. sudo systemctl enable ${serviceName}\n` +
+                     `5. sudo systemctl start ${serviceName}\n\n` +
+                     `--- Service File Content ---\n\n${data.content}`;
+      
+      // Create a modal or alert with the content
+      alert(message);
+      
+      // Copy to clipboard
+      navigator.clipboard.writeText(data.content).then(() => {
+        console.log('Service file copied to clipboard');
+      });
+    } else {
+      alert('Error: ' + data.error);
+    }
+  } catch (error) {
+    console.error('View service file error:', error);
+    alert('Failed to generate service file');
+  }
+}
+
+document.getElementById('startupTaskForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const taskData = {
+    name: document.getElementById('taskName').value.trim(),
+    description: document.getElementById('taskDescription').value.trim(),
+    command: document.getElementById('taskCommand').value.trim(),
+    workingDirectory: document.getElementById('taskWorkDir').value.trim(),
+    user: document.getElementById('taskUser').value.trim(),
+    restartPolicy: document.getElementById('taskRestartPolicy').value,
+    enabled: document.getElementById('taskEnabled').checked
+  };
+
+  if (!/^[a-z0-9-]+$/.test(taskData.name)) {
+    alert('Task name must contain only lowercase letters, numbers, and hyphens');
+    return;
+  }
+
+  try {
+    let updatedTasks = [...allStartupTasks];
+
+    if (editingStartupTaskId !== null) {
+      updatedTasks[editingStartupTaskId] = taskData;
+    } else {
+      if (updatedTasks.find(t => t.name === taskData.name)) {
+        alert('A task with this name already exists');
+        return;
+      }
+      updatedTasks.push(taskData);
+    }
+
+    const response = await fetch('/api/admin/startup-tasks', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(updatedTasks)
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      // Generate the service file
+      await viewServiceFile(taskData.name, editingStartupTaskId !== null ? editingStartupTaskId : updatedTasks.length - 1);
+      
+      alert(editingStartupTaskId !== null ? 'Startup task updated!' : 'Startup task created!\n\nThe systemd service file has been copied to your clipboard.\nFollow the instructions to install it manually.');
+      closeStartupTaskModal();
+      loadStartupTasks();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  } catch (error) {
+    console.error('Save startup task error:', error);
+    alert('Failed to save startup task');
+  }
+});
+
+document.getElementById('createStartupTaskBtn').addEventListener('click', showCreateStartupTaskModal);
+document.getElementById('closeStartupTaskModal').addEventListener('click', closeStartupTaskModal);
+document.getElementById('cancelStartupTaskBtn').addEventListener('click', closeStartupTaskModal);
+document.getElementById('reloadStartupTasksBtn').addEventListener('click', loadStartupTasks);
+
 // Make functions global for inline onclick handlers
 window.editUser = editUser;
 window.deleteUser = deleteUser;
 window.editTerminal = editTerminal;
 window.deleteTerminal = deleteTerminal;
+window.editStartupTask = editStartupTask;
+window.deleteStartupTask = deleteStartupTask;
+window.controlService = controlService;
+window.viewServiceFile = viewServiceFile;
 
 // Initialize
 loadUsers();
 loadTerminalsConfig();
+loadStartupTasks();

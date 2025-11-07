@@ -10,6 +10,7 @@ const path = require('path');
 const authManager = require('./auth');
 const userManager = require('./user-manager');
 const tmuxManager = require('./tmux-manager');
+const startupManager = require('./startup-manager');
 
 const app = express();
 const server = http.createServer(app);
@@ -193,6 +194,105 @@ app.put('/api/admin/terminals',
       res.json({ success: true, message: 'Terminals updated successfully' });
     } catch (error) {
       console.error('Update terminals error:', error);
+      res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+// ==================== STARTUP TASKS ROUTES ====================
+
+/**
+ * Get all startup tasks (admin only)
+ */
+app.get('/api/admin/startup-tasks',
+  authManager.verifyTokenMiddleware(),
+  authManager.verifyAdminMiddleware(),
+  async (req, res) => {
+    try {
+      const tasks = await startupManager.getAllServicesStatus();
+      res.json(tasks);
+    } catch (error) {
+      console.error('Get startup tasks error:', error);
+      res.status(500).json({ error: 'Failed to load startup tasks' });
+    }
+  }
+);
+
+/**
+ * Create or update startup tasks (admin only)
+ */
+app.put('/api/admin/startup-tasks',
+  authManager.verifyTokenMiddleware(),
+  authManager.verifyAdminMiddleware(),
+  async (req, res) => {
+    try {
+      const tasks = req.body;
+      
+      if (!Array.isArray(tasks)) {
+        return res.status(400).json({ error: 'Invalid tasks data' });
+      }
+
+      await startupManager.saveStartupTasks(tasks);
+      res.json({ success: true, message: 'Startup tasks updated successfully' });
+    } catch (error) {
+      console.error('Update startup tasks error:', error);
+      res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * Generate systemd service file (admin only)
+ */
+app.post('/api/admin/startup-tasks/generate',
+  authManager.verifyTokenMiddleware(),
+  authManager.verifyAdminMiddleware(),
+  async (req, res) => {
+    try {
+      const task = req.body;
+      const result = await startupManager.createService(task);
+      res.json(result);
+    } catch (error) {
+      console.error('Generate service error:', error);
+      res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * Control service (start/stop/restart) (admin only)
+ */
+app.post('/api/admin/startup-tasks/:serviceName/:action',
+  authManager.verifyTokenMiddleware(),
+  authManager.verifyAdminMiddleware(),
+  async (req, res) => {
+    try {
+      const { serviceName, action } = req.params;
+      let result;
+
+      switch (action) {
+        case 'start':
+          result = await startupManager.startService(serviceName);
+          break;
+        case 'stop':
+          result = await startupManager.stopService(serviceName);
+          break;
+        case 'restart':
+          result = await startupManager.restartService(serviceName);
+          break;
+        case 'enable':
+          result = await startupManager.enableService(serviceName);
+          break;
+        case 'disable':
+          result = await startupManager.disableService(serviceName);
+          break;
+        default:
+          return res.status(400).json({ error: 'Invalid action' });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error('Service control error:', error);
       res.status(400).json({ error: error.message });
     }
   }
