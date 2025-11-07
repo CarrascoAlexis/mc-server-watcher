@@ -65,14 +65,13 @@
       <div id="terminalsTab" class="admin-tab">
         <div class="tab-header">
           <h2>Terminals Configuration</h2>
-          <button id="reloadTerminalsBtn" class="btn btn-secondary">↻ Reload</button>
+          <div style="display: flex; gap: 10px;">
+            <button id="createTerminalBtn" class="btn btn-primary">+ Create Terminal</button>
+            <button id="reloadTerminalsBtn" class="btn btn-secondary">↻ Reload</button>
+          </div>
         </div>
 
         <div class="terminals-config">
-          <p class="info-message">
-            ℹ️ To add or modify terminals, edit the <code>config/terminals.json</code> file.
-          </p>
-
           <div id="terminalsConfigList" class="config-list">
             <!-- Terminals config will be loaded here -->
           </div>
@@ -121,6 +120,65 @@
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
           <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Create/Edit Terminal Modal -->
+  <div id="terminalModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="terminalModalTitle">Create Terminal</h3>
+        <button class="modal-close" id="closeTerminalModal">&times;</button>
+      </div>
+
+      <form id="terminalForm" class="modal-form">
+        <input type="hidden" id="terminalEditIndex">
+
+        <div class="form-group">
+          <label for="terminalId">ID * (unique, no spaces)</label>
+          <input type="text" id="terminalId" required placeholder="minecraft-server">
+          <small>Example: minecraft-server, backup-server</small>
+        </div>
+
+        <div class="form-group">
+          <label for="terminalName">Name *</label>
+          <input type="text" id="terminalName" required placeholder="Minecraft Server">
+        </div>
+
+        <div class="form-group">
+          <label for="terminalDescription">Description</label>
+          <input type="text" id="terminalDescription" placeholder="Main Minecraft server console">
+        </div>
+
+        <div class="form-group">
+          <label for="terminalSessionName">Session Name (tmux)</label>
+          <input type="text" id="terminalSessionName" placeholder="Leave empty to use ID">
+          <small>Name of the tmux session (optional)</small>
+        </div>
+
+        <div class="form-group">
+          <label for="terminalWorkDir">Working Directory</label>
+          <input type="text" id="terminalWorkDir" placeholder="/path/to/server">
+          <small>Absolute path where tmux session starts</small>
+        </div>
+
+        <div class="form-group">
+          <label for="terminalInitCmd">Initial Command</label>
+          <input type="text" id="terminalInitCmd" placeholder="java -jar server.jar">
+          <small>Command to run when session starts (optional)</small>
+        </div>
+
+        <div class="form-group">
+          <label for="terminalIcon">Icon (emoji)</label>
+          <input type="text" id="terminalIcon" placeholder="🎮" maxlength="2">
+          <small>Emoji displayed in the interface</small>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="cancelTerminalBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Terminal</button>
         </div>
       </form>
     </div>

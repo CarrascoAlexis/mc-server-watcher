@@ -173,6 +173,31 @@ app.get('/api/admin/terminals',
   }
 );
 
+/**
+ * Update terminals config (admin only)
+ */
+app.put('/api/admin/terminals',
+  authManager.verifyTokenMiddleware(),
+  authManager.verifyAdminMiddleware(),
+  async (req, res) => {
+    try {
+      const terminals = req.body;
+      
+      // Validate terminals array
+      if (!Array.isArray(terminals)) {
+        return res.status(400).json({ error: 'Invalid terminals data' });
+      }
+
+      // Save to file
+      await tmuxManager.saveTerminals(terminals);
+      res.json({ success: true, message: 'Terminals updated successfully' });
+    } catch (error) {
+      console.error('Update terminals error:', error);
+      res.status(400).json({ error: error.message });
+    }
+  }
+);
+
 // ==================== WEBSOCKET HANDLING ====================
 
 const activeStreams = new Map();

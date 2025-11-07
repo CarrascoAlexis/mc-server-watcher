@@ -12,6 +12,7 @@ document.getElementById('currentUser').textContent = user.username;
 // State
 let allTerminals = [];
 let editingUserId = null;
+let editingTerminalIndex = null;
 
 // Tab switching
 document.querySelectorAll('.admin-nav a').forEach(link => {
@@ -84,11 +85,11 @@ async function loadTerminalsConfig() {
     container.innerHTML = '';
 
     if (allTerminals.length === 0) {
-      container.innerHTML = '<p>No terminals configured yet.</p>';
+      container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">No terminals configured yet. Click "+ Create Terminal" to add one.</p>';
       return;
     }
 
-    allTerminals.forEach(terminal => {
+    allTerminals.forEach((terminal, index) => {
       const card = document.createElement('div');
       card.className = 'config-card';
       card.innerHTML = `
@@ -99,6 +100,10 @@ async function loadTerminalsConfig() {
           <strong>Session Name:</strong> ${terminal.sessionName || terminal.id}<br>
           <strong>Working Directory:</strong> ${terminal.workingDirectory || 'N/A'}<br>
           <strong>Initial Command:</strong> ${terminal.initialCommand || 'None'}
+        </div>
+        <div class="table-actions" style="margin-top: 15px;">
+          <button class="btn btn-small btn-secondary" onclick="editTerminal(${index})">Edit</button>
+          <button class="btn btn-small btn-danger" onclick="deleteTerminal(${index}, '${terminal.name}')">Delete</button>
         </div>
       `;
       container.appendChild(card);
@@ -313,9 +318,147 @@ document.getElementById('userModal').addEventListener('click', (e) => {
   }
 });
 
+document.getElementById('terminalModal').addEventListener('click', (e) => {
+  if (e.target.id === 'terminalModal') {
+    closeTerminalModal();
+  }
+});
+
+// Terminal management functions
+function showCreateTerminalModal() {
+  editingTerminalIndex = null;
+  document.getElementById('terminalModalTitle').textContent = 'Create Terminal';
+  document.getElementById('terminalForm').reset();
+  document.getElementById('terminalEditIndex').value = '';
+  document.getElementById('terminalModal').classList.add('active');
+}
+
+function editTerminal(index) {
+  const terminal = allTerminals[index];
+  if (!terminal) return;
+
+  editingTerminalIndex = index;
+  document.getElementById('terminalModalTitle').textContent = 'Edit Terminal';
+  document.getElementById('terminalEditIndex').value = index;
+  document.getElementById('terminalId').value = terminal.id;
+  document.getElementById('terminalName').value = terminal.name;
+  document.getElementById('terminalDescription').value = terminal.description || '';
+  document.getElementById('terminalSessionName').value = terminal.sessionName || '';
+  document.getElementById('terminalWorkDir').value = terminal.workingDirectory || '';
+  document.getElementById('terminalInitCmd').value = terminal.initialCommand || '';
+  document.getElementById('terminalIcon').value = terminal.icon || '';
+
+  document.getElementById('terminalModal').classList.add('active');
+}
+
+async function deleteTerminal(index, name) {
+  if (!confirm(`Are you sure you want to delete terminal "${name}"?\n\nUsers with access to this terminal will lose it.`)) {
+    return;
+  }
+
+  try {
+    // Remove from array
+    const updatedTerminals = [...allTerminals];
+    updatedTerminals.splice(index, 1);
+
+    const response = await fetch('/api/admin/terminals', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(updatedTerminals)
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      alert('Terminal deleted successfully');
+      loadTerminalsConfig();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  } catch (error) {
+    console.error('Delete terminal error:', error);
+    alert('Failed to delete terminal');
+  }
+}
+
+function closeTerminalModal() {
+  document.getElementById('terminalModal').classList.remove('active');
+  document.getElementById('terminalForm').reset();
+  editingTerminalIndex = null;
+}
+
+// Terminal form submission
+document.getElementById('terminalForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const terminalData = {
+    id: document.getElementById('terminalId').value.trim(),
+    name: document.getElementById('terminalName').value.trim(),
+    description: document.getElementById('terminalDescription').value.trim(),
+    sessionName: document.getElementById('terminalSessionName').value.trim(),
+    workingDirectory: document.getElementById('terminalWorkDir').value.trim(),
+    initialCommand: document.getElementById('terminalInitCmd').value.trim(),
+    icon: document.getElementById('terminalIcon').value.trim()
+  };
+
+  // Validate ID format
+  if (!/^[a-z0-9-]+$/.test(terminalData.id)) {
+    alert('ID must contain only lowercase letters, numbers, and hyphens');
+    return;
+  }
+
+  try {
+    let updatedTerminals = [...allTerminals];
+
+    if (editingTerminalIndex !== null) {
+      // Update existing terminal
+      updatedTerminals[editingTerminalIndex] = terminalData;
+    } else {
+      // Check if ID already exists
+      if (updatedTerminals.find(t => t.id === terminalData.id)) {
+        alert('A terminal with this ID already exists');
+        return;
+      }
+      // Add new terminal
+      updatedTerminals.push(terminalData);
+    }
+
+    const response = await fetch('/api/admin/terminals', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(updatedTerminals)
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      alert(editingTerminalIndex !== null ? 'Terminal updated successfully' : 'Terminal created successfully');
+      closeTerminalModal();
+      loadTerminalsConfig();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  } catch (error) {
+    console.error('Save terminal error:', error);
+    alert('Failed to save terminal');
+  }
+});
+
+document.getElementById('createTerminalBtn').addEventListener('click', showCreateTerminalModal);
+document.getElementById('closeTerminalModal').addEventListener('click', closeTerminalModal);
+document.getElementById('cancelTerminalBtn').addEventListener('click', closeTerminalModal);
+
 // Make functions global for inline onclick handlers
 window.editUser = editUser;
 window.deleteUser = deleteUser;
+window.editTerminal = editTerminal;
+window.deleteTerminal = deleteTerminal;
 
 // Initialize
 loadUsers();

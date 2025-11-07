@@ -25,6 +25,18 @@ class TmuxManager {
   }
 
   /**
+   * Save terminals configuration
+   */
+  async saveTerminals(terminals) {
+    try {
+      await fs.writeFile(TERMINALS_CONFIG, JSON.stringify(terminals, null, 2), 'utf-8');
+      return { success: true };
+    } catch (error) {
+      throw new Error(`Failed to save terminals: ${error.message}`);
+    }
+  }
+
+  /**
    * Execute tmux command
    */
   async execTmux(args) {
