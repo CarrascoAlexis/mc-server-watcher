@@ -11,10 +11,12 @@ class TmuxManager {
 
   /**
    * Load terminals configuration
+   * @param {string} configPath - Optional custom config file path
    */
-  async loadTerminalsConfig() {
+  async loadTerminalsConfig(configPath = null) {
     try {
-      const data = await fs.readFile(TERMINALS_CONFIG, 'utf-8');
+      const filePath = configPath || TERMINALS_CONFIG;
+      const data = await fs.readFile(filePath, 'utf-8');
       return JSON.parse(data);
     } catch (error) {
       if (error.code === 'ENOENT') {
@@ -77,9 +79,11 @@ class TmuxManager {
 
   /**
    * Create or attach to tmux session
+   * @param {string} terminalId - Terminal ID
+   * @param {string} configPath - Optional custom config file path
    */
-  async createOrAttachSession(terminalId) {
-    const terminals = await this.loadTerminalsConfig();
+  async createOrAttachSession(terminalId, configPath = null) {
+    const terminals = await this.loadTerminalsConfig(configPath);
     const terminal = terminals.find(t => t.id === terminalId);
 
     if (!terminal) {
@@ -110,6 +114,92 @@ class TmuxManager {
       terminal,
       exists
     };
+  }
+
+  /**
+   * Execute command on tmux channel using config file
+   * @param {string} terminalId - Terminal ID from config
+   * @param {string} command - Command to execute
+   * @param {string} configPath - Optional custom config file path
+   */
+  async executeOnChannel(terminalId, command, configPath = null) {
+    try {
+      // Load configuration
+      const terminals = await this.loadTerminalsConfig(configPath);
+      const terminal = terminals.find(t => t.id === terminalId);
+
+      if (!terminal) {
+        throw new Error(`Terminal '${terminalId}' not found in configuration`);
+      }
+
+      const sessionName = terminal.sessionName || terminal.id;
+      
+      // Check if session exists, create if not
+      const exists = await this.sessionExists(sessionName);
+      
+      if (!exists) {
+        console.log(`Session ${sessionName} doesn't exist, creating it...`);
+        await this.createOrAttachSession(terminalId, configPath);
+      }
+
+      // Send command to the session
+      await this.sendCommand(sessionName, command);
+
+      return {
+        success: true,
+        sessionName,
+        terminal,
+        command,
+        message: `Command executed on ${sessionName}`
+      };
+    } catch (error) {
+      throw new Error(`Failed to execute on channel: ${error.message}`);
+    }
+  }
+
+  /**
+   * Execute command on multiple channels
+   * @param {Array<string>} terminalIds - Array of terminal IDs
+   * @param {string} command - Command to execute
+   * @param {string} configPath - Optional custom config file path
+   */
+  async executeOnMultipleChannels(terminalIds, command, configPath = null) {
+    const results = [];
+    
+    for (const terminalId of terminalIds) {
+      try {
+        const result = await this.executeOnChannel(terminalId, command, configPath);
+        results.push({ terminalId, ...result });
+      } catch (error) {
+        results.push({
+          terminalId,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Execute command on all channels from config
+   * @param {string} command - Command to execute
+   * @param {string} configPath - Optional custom config file path
+   */
+  async executeOnAllChannels(command, configPath = null) {
+    try {
+      const terminals = await this.loadTerminalsConfig(configPath);
+      
+      if (terminals.length === 0) {
+        throw new Error('No terminals found in configuration');
+      }
+
+      const terminalIds = terminals.map(t => t.id);
+      return await this.executeOnMultipleChannels(terminalIds, command, configPath);
+    } catch (error) {
+      throw new Error(`Failed to execute on all channels: ${error.message}`);
+    }
   }
 
   /**

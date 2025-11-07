@@ -199,6 +199,75 @@ app.put('/api/admin/terminals',
   }
 );
 
+/**
+ * Execute command on specific tmux channel
+ * Body: { terminalId, command, configPath? }
+ */
+app.post('/api/execute-channel',
+  authManager.verifyTokenMiddleware(),
+  async (req, res) => {
+    try {
+      const { terminalId, command, configPath } = req.body;
+
+      if (!terminalId || !command) {
+        return res.status(400).json({ error: 'terminalId and command are required' });
+      }
+
+      const result = await tmuxManager.executeOnChannel(terminalId, command, configPath);
+      res.json(result);
+    } catch (error) {
+      console.error('Execute on channel error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * Execute command on multiple tmux channels
+ * Body: { terminalIds: [], command, configPath? }
+ */
+app.post('/api/execute-multiple-channels',
+  authManager.verifyTokenMiddleware(),
+  async (req, res) => {
+    try {
+      const { terminalIds, command, configPath } = req.body;
+
+      if (!terminalIds || !Array.isArray(terminalIds) || !command) {
+        return res.status(400).json({ error: 'terminalIds (array) and command are required' });
+      }
+
+      const results = await tmuxManager.executeOnMultipleChannels(terminalIds, command, configPath);
+      res.json(results);
+    } catch (error) {
+      console.error('Execute on multiple channels error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * Execute command on all tmux channels from config
+ * Body: { command, configPath? }
+ */
+app.post('/api/execute-all-channels',
+  authManager.verifyTokenMiddleware(),
+  async (req, res) => {
+    try {
+      const { command, configPath } = req.body;
+
+      if (!command) {
+        return res.status(400).json({ error: 'command is required' });
+      }
+
+      const results = await tmuxManager.executeOnAllChannels(command, configPath);
+      res.json(results);
+    } catch (error) {
+      console.error('Execute on all channels error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
 // ==================== STARTUP TASKS ROUTES ====================
 
 /**

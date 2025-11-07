@@ -10,12 +10,15 @@ Application web sécurisée pour gérer des sessions tmux et interagir avec des 
 - 💬 **Interface terminal interactive** avec xterm.js
 - 🔄 **Mise à jour en temps réel** via WebSocket
 - 📱 **Interface responsive** adaptée mobile
+- 🎯 **Exécution de commandes sur canaux tmux** via API ou CLI
 
 ### Pour les administrateurs
 - 👥 **Gestion complète des utilisateurs** (CRUD)
 - ⚙️ **Configuration des accès** par terminal
 - 🔒 **Rôles et permissions** (admin/user)
 - 📊 **Panel d'administration** intuitif
+- 🚀 **Gestion des tâches au démarrage** via systemd
+- 🔌 **API d'exécution de commandes** sur un ou plusieurs canaux tmux
 
 ## 🚀 Installation
 
@@ -149,6 +152,78 @@ Le serveur sera accessible sur `http://localhost:3000`
 - **Clear** : Efface l'affichage du terminal (côté client uniquement)
 - **Reconnect** : Se reconnecte à la session tmux
 - **Détacher** : Cliquez sur un autre terminal ou déconnectez-vous
+
+## ⚡ Exécution de commandes sur canaux tmux
+
+Cette fonctionnalité permet d'exécuter des commandes sur des canaux tmux configurés, que ce soit via l'API ou en ligne de commande.
+
+### Via l'API REST
+
+#### Exécuter sur un seul canal
+```bash
+curl -X POST http://localhost:3000/api/execute-channel \
+  -H "Authorization: Bearer VOTRE_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "terminalId": "minecraft-server",
+    "command": "say Hello from API!"
+  }'
+```
+
+#### Exécuter sur plusieurs canaux
+```bash
+curl -X POST http://localhost:3000/api/execute-multiple-channels \
+  -H "Authorization: Bearer VOTRE_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "terminalIds": ["minecraft-server", "backup-server"],
+    "command": "uptime"
+  }'
+```
+
+#### Exécuter sur tous les canaux
+```bash
+curl -X POST http://localhost:3000/api/execute-all-channels \
+  -H "Authorization: Bearer VOTRE_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "command": "date"
+  }'
+```
+
+### Via CLI (scripts/tmux-exec.js)
+
+Un outil en ligne de commande est fourni pour faciliter l'exécution :
+
+#### Configuration initiale
+```bash
+# Définir le token d'authentification
+node scripts/tmux-exec.js --token VOTRE_JWT_TOKEN
+```
+
+#### Utilisation
+```bash
+# Exécuter sur un canal spécifique
+node scripts/tmux-exec.js minecraft-server "say Server maintenance"
+
+# Exécuter sur plusieurs canaux
+node scripts/tmux-exec.js --multiple mc-server,backup "uptime"
+
+# Exécuter sur tous les canaux
+node scripts/tmux-exec.js --all "date"
+
+# Utiliser un fichier de config personnalisé
+node scripts/tmux-exec.js --config /path/to/config.json minecraft-server "status"
+```
+
+### Fonctionnalités avancées
+
+- ✅ **Création automatique de sessions** : Si la session tmux n'existe pas, elle est créée automatiquement
+- ✅ **Support de fichiers de config multiples** : Utilisez `configPath` pour spécifier un fichier de configuration alternatif
+- ✅ **Gestion d'erreurs robuste** : Retours détaillés pour chaque canal
+- ✅ **Authentification JWT** : Toutes les opérations nécessitent une authentification
+
+📖 **Documentation complète** : Voir [docs/TMUX-EXECUTION.md](docs/TMUX-EXECUTION.md)
 
 ## 🔧 Configuration avancée
 
@@ -302,6 +377,16 @@ mc-server-watcher/
 - `PUT /api/admin/users/:userId` - Modifier un utilisateur
 - `DELETE /api/admin/users/:userId` - Supprimer un utilisateur
 - `GET /api/admin/terminals` - Liste tous les terminaux
+- `PUT /api/admin/terminals` - Mettre à jour la configuration des terminaux
+- `GET /api/admin/startup-tasks` - Liste toutes les tâches de démarrage
+- `PUT /api/admin/startup-tasks` - Mettre à jour les tâches de démarrage
+- `POST /api/admin/startup-tasks/generate` - Générer un fichier systemd
+- `POST /api/admin/startup-tasks/:serviceName/:action` - Contrôler un service (start/stop/restart/enable/disable)
+
+### Exécution de commandes sur canaux tmux
+- `POST /api/execute-channel` - Exécuter une commande sur un canal spécifique
+- `POST /api/execute-multiple-channels` - Exécuter une commande sur plusieurs canaux
+- `POST /api/execute-all-channels` - Exécuter une commande sur tous les canaux
 
 ### WebSocket Events
 

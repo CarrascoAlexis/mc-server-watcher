@@ -1,0 +1,29 @@
+[
+  {
+    "id": "minecraft-server",
+    "name": "Minecraft Server",
+    "description": "Serveur Minecraft principal",
+    "sessionName": "mc-server",
+    "workingDirectory": "/home/user/minecraft",
+    "initialCommand": "./start.sh",
+    "icon": "🎮"
+  },
+  {
+    "id": "backup-server",
+    "name": "Backup Server",
+    "description": "Serveur de backup",
+    "sessionName": "backup",
+    "workingDirectory": "/home/user/backups",
+    "initialCommand": "",
+    "icon": "💾"
+  },
+  {
+    "id": "web-app",
+    "name": "Web Application",
+    "description": "Application web Node.js",
+    "sessionName": "webapp",
+    "workingDirectory": "/var/www/app",
+    "initialCommand": "npm start",
+    "icon": "🌐"
+  }
+]
