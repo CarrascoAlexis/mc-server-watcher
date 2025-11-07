@@ -58,13 +58,26 @@ npm install --production
 
 ### 5. Configuration du pare-feu
 
+**IMPORTANT** : N'oubliez pas d'ouvrir le port 3000 !
+
 ```bash
 # Si vous utilisez UFW (Ubuntu/Debian)
 sudo ufw allow 3000/tcp
+sudo ufw status  # Vérifier que le port est bien ouvert
 
 # Si vous utilisez firewalld (CentOS/RHEL)
 sudo firewall-cmd --permanent --add-port=3000/tcp
 sudo firewall-cmd --reload
+sudo firewall-cmd --list-ports  # Vérifier
+```
+
+**Note** : Si vous utilisez NGINX comme reverse proxy, vous pouvez restreindre l'accès direct au port 3000 :
+```bash
+# Ouvrir seulement HTTP/HTTPS pour NGINX
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# Le port 3000 reste accessible uniquement en local pour NGINX
 ```
 
 ---

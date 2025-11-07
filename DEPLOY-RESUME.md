@@ -116,11 +116,17 @@ Ouvrez votre navigateur :
 
 4. **Configurez un pare-feu** :
    ```bash
+   # Avec UFW (Ubuntu/Debian)
    sudo ufw allow 22/tcp    # SSH
-   sudo ufw allow 80/tcp    # HTTP
-   sudo ufw allow 443/tcp   # HTTPS
-   sudo ufw allow 3000/tcp  # Application (si pas de reverse proxy)
+   sudo ufw allow 80/tcp    # HTTP (si NGINX)
+   sudo ufw allow 443/tcp   # HTTPS (si NGINX)
+   sudo ufw allow 3000/tcp  # Application (accès direct)
    sudo ufw enable
+   sudo ufw status          # Vérifier
+   
+   # Ou avec firewalld (CentOS/RHEL)
+   sudo firewall-cmd --permanent --add-port=3000/tcp
+   sudo firewall-cmd --reload
    ```
 
 5. **Utilisez NGINX** comme reverse proxy (voir DEPLOYMENT.md)
