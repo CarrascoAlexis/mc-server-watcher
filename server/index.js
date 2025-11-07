@@ -11,6 +11,7 @@ const authManager = require('./auth');
 const userManager = require('./user-manager');
 const tmuxManager = require('./tmux-manager');
 const startupManager = require('./startup-manager');
+const securityManager = require('./security-manager');
 
 const app = express();
 const server = http.createServer(app);
@@ -40,6 +41,18 @@ app.use('/api/', limiter);
 
 // Serve static files
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Initialize security manager
+securityManager.loadConfig().catch(console.error);
+
+// Helper function to get client IP
+function getClientIP(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0] || 
+         req.headers['x-real-ip'] || 
+         req.connection.remoteAddress || 
+         req.socket.remoteAddress ||
+         '127.0.0.1';
+}
 
 // ==================== API ROUTES ====================
 
@@ -213,6 +226,26 @@ app.post('/api/execute-channel',
         return res.status(400).json({ error: 'terminalId and command are required' });
       }
 
+      // Security validation
+      const clientIP = getClientIP(req);
+      const username = req.user.username;
+      
+      const securityCheck = await securityManager.validateAccess(
+        terminalId,
+        username,
+        clientIP,
+        command
+      );
+
+      if (!securityCheck.allowed) {
+        return res.status(403).json({ 
+          error: 'Access denied',
+          reasons: securityCheck.reasons,
+          requiresApproval: securityCheck.requiresApproval,
+          retryAfter: securityCheck.retryAfter
+        });
+      }
+
       const result = await tmuxManager.executeOnChannel(terminalId, command, configPath);
       res.json(result);
     } catch (error) {
@@ -236,7 +269,41 @@ app.post('/api/execute-multiple-channels',
         return res.status(400).json({ error: 'terminalIds (array) and command are required' });
       }
 
-      const results = await tmuxManager.executeOnMultipleChannels(terminalIds, command, configPath);
+      const clientIP = getClientIP(req);
+      const username = req.user.username;
+      const results = [];
+
+      // Validate security for each terminal
+      for (const terminalId of terminalIds) {
+        const securityCheck = await securityManager.validateAccess(
+          terminalId,
+          username,
+          clientIP,
+          command
+        );
+
+        if (!securityCheck.allowed) {
+          results.push({
+            terminalId,
+            success: false,
+            error: 'Access denied',
+            reasons: securityCheck.reasons
+          });
+          continue;
+        }
+
+        try {
+          const result = await tmuxManager.executeOnChannel(terminalId, command, configPath);
+          results.push({ terminalId, ...result });
+        } catch (error) {
+          results.push({
+            terminalId,
+            success: false,
+            error: error.message
+          });
+        }
+      }
+
       res.json(results);
     } catch (error) {
       console.error('Execute on multiple channels error:', error);
@@ -259,7 +326,44 @@ app.post('/api/execute-all-channels',
         return res.status(400).json({ error: 'command is required' });
       }
 
-      const results = await tmuxManager.executeOnAllChannels(command, configPath);
+      const clientIP = getClientIP(req);
+      const username = req.user.username;
+      
+      // Get all terminals
+      const terminals = await tmuxManager.loadTerminalsConfig(configPath);
+      const results = [];
+
+      // Validate and execute on each terminal
+      for (const terminal of terminals) {
+        const securityCheck = await securityManager.validateAccess(
+          terminal.id,
+          username,
+          clientIP,
+          command
+        );
+
+        if (!securityCheck.allowed) {
+          results.push({
+            terminalId: terminal.id,
+            success: false,
+            error: 'Access denied',
+            reasons: securityCheck.reasons
+          });
+          continue;
+        }
+
+        try {
+          const result = await tmuxManager.executeOnChannel(terminal.id, command, configPath);
+          results.push({ terminalId: terminal.id, ...result });
+        } catch (error) {
+          results.push({
+            terminalId: terminal.id,
+            success: false,
+            error: error.message
+          });
+        }
+      }
+
       res.json(results);
     } catch (error) {
       console.error('Execute on all channels error:', error);
@@ -324,6 +428,66 @@ app.post('/api/admin/startup-tasks/generate',
     } catch (error) {
       console.error('Generate service error:', error);
       res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * Get security configuration (admin only)
+ */
+app.get('/api/admin/security',
+  authManager.verifyTokenMiddleware(),
+  authManager.verifyAdminMiddleware(),
+  async (req, res) => {
+    try {
+      const config = await securityManager.loadConfig();
+      res.json(config);
+    } catch (error) {
+      console.error('Get security config error:', error);
+      res.status(500).json({ error: 'Failed to load security configuration' });
+    }
+  }
+);
+
+/**
+ * Update security configuration (admin only)
+ */
+app.put('/api/admin/security',
+  authManager.verifyTokenMiddleware(),
+  authManager.verifyAdminMiddleware(),
+  async (req, res) => {
+    try {
+      await securityManager.saveConfig(req.body);
+      securityManager.config = req.body; // Update in memory
+      res.json({ success: true, message: 'Security configuration updated' });
+    } catch (error) {
+      console.error('Update security config error:', error);
+      res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * Get security logs (admin only)
+ */
+app.get('/api/admin/security/logs',
+  authManager.verifyTokenMiddleware(),
+  authManager.verifyAdminMiddleware(),
+  async (req, res) => {
+    try {
+      const filters = {
+        terminalId: req.query.terminalId,
+        username: req.query.username,
+        eventType: req.query.eventType,
+        startDate: req.query.startDate,
+        endDate: req.query.endDate
+      };
+      
+      const logs = await securityManager.getSecurityLogs(filters);
+      res.json(logs);
+    } catch (error) {
+      console.error('Get security logs error:', error);
+      res.status(500).json({ error: 'Failed to load security logs' });
     }
   }
 );
@@ -436,6 +600,26 @@ io.on('connection', (socket) => {
       // Check if user has access
       if (!socket.user.terminals.includes(terminalId)) {
         socket.emit('error', { message: 'Access denied' });
+        return;
+      }
+
+      // Security validation
+      const clientIP = socket.handshake.address;
+      const username = socket.user.username;
+      
+      const securityCheck = await securityManager.validateAccess(
+        terminalId,
+        username,
+        clientIP,
+        command
+      );
+
+      if (!securityCheck.allowed) {
+        socket.emit('error', { 
+          message: 'Command denied',
+          reasons: securityCheck.reasons,
+          requiresApproval: securityCheck.requiresApproval
+        });
         return;
       }
 

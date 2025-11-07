@@ -1,0 +1,113 @@
+{
+  "ipWhitelist": {
+    "enabled": false,
+    "allowedIPs": [
+      "127.0.0.1",
+      "::1"
+    ],
+    "allowedRanges": [
+      "192.168.0.0/16",
+      "10.0.0.0/8",
+      "172.16.0.0/12"
+    ]
+  },
+  "terminalRestrictions": {
+    "minecraft-server": {
+      "allowedIPs": ["192.168.1.0/24"],
+      "allowedCommands": [
+        "say *",
+        "list",
+        "whitelist *",
+        "kick *",
+        "save-all",
+        "save-on",
+        "save-off",
+        "weather *",
+        "time *",
+        "gamemode * *"
+      ],
+      "deniedCommands": [
+        "stop",
+        "op *",
+        "deop *"
+      ],
+      "requiresApproval": [
+        "ban *",
+        "pardon *",
+        "give *"
+      ],
+      "maxCommandsPerMinute": 10,
+      "allowedUsers": ["admin", "moderator"]
+    },
+    "backup-server": {
+      "allowedCommands": [
+        "./backup.sh",
+        "./restore.sh *",
+        "ls *",
+        "du -h *"
+      ],
+      "deniedCommands": [
+        "rm *",
+        "mv *",
+        "chmod *"
+      ],
+      "maxCommandsPerMinute": 5,
+      "allowedUsers": ["admin"]
+    },
+    "web-app": {
+      "allowedCommands": [
+        "npm run *",
+        "pm2 status",
+        "pm2 logs *",
+        "pm2 restart *",
+        "git pull",
+        "git status"
+      ],
+      "deniedCommands": [
+        "npm install *",
+        "rm *",
+        "git push *"
+      ],
+      "maxCommandsPerMinute": 15,
+      "allowedUsers": ["admin", "developer"]
+    }
+  },
+  "commandFiltering": {
+    "enabled": true,
+    "globalDeniedCommands": [
+      "rm -rf *",
+      "rm -rf /*",
+      "mkfs *",
+      "dd if=*",
+      ":(){ :|:& };:",
+      "chmod -R 777 /",
+      "wget * | sh",
+      "curl * | bash",
+      "sudo rm *",
+      "sudo dd *",
+      "shutdown *",
+      "reboot",
+      "halt",
+      "poweroff"
+    ],
+    "globalDeniedPatterns": [
+      ".*\\bsudo\\s+rm\\b.*",
+      ".*\\bsudo\\s+dd\\b.*",
+      ".*>/dev/sd[a-z].*",
+      ".*\\|\\s*sh.*",
+      ".*\\|\\s*bash.*"
+    ]
+  },
+  "rateLimiting": {
+    "enabled": true,
+    "globalLimit": 20,
+    "perUserLimit": 10,
+    "windowMs": 60000
+  },
+  "logging": {
+    "enabled": true,
+    "logAllCommands": true,
+    "logFailedAttempts": true,
+    "logPath": "./logs/security.log"
+  }
+}

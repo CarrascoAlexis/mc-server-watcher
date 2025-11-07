@@ -19,6 +19,12 @@ Application web sécurisée pour gérer des sessions tmux et interagir avec des 
 - 📊 **Panel d'administration** intuitif
 - 🚀 **Gestion des tâches au démarrage** via systemd
 - 🔌 **API d'exécution de commandes** sur un ou plusieurs canaux tmux
+- 🛡️ **Sécurité avancée** :
+  - Restrictions par IP/réseau (CIDR)
+  - Filtrage de commandes (whitelist/blacklist)
+  - Limitations par utilisateur et terminal
+  - Rate limiting anti-spam
+  - Audit logging complet
 
 ## 🚀 Installation
 
