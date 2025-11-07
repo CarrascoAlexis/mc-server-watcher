@@ -7,10 +7,12 @@ const fs = require('fs').promises;
 const path = require('path');
 
 const SECURITY_CONFIG = path.join(__dirname, '../config/security.json');
+const TERMINALS_CONFIG = path.join(__dirname, '../config/terminals.json');
 
 class SecurityManager {
   constructor() {
     this.config = null;
+    this.terminals = null;
   }
 
   /**
@@ -30,6 +32,31 @@ class SecurityManager {
       }
       throw error;
     }
+  }
+
+  /**
+   * Load terminals configuration
+   */
+  async loadTerminals() {
+    try {
+      const data = await fs.readFile(TERMINALS_CONFIG, 'utf-8');
+      this.terminals = JSON.parse(data);
+      return this.terminals;
+    } catch (error) {
+      console.error('Failed to load terminals config:', error);
+      this.terminals = [];
+      return this.terminals;
+    }
+  }
+
+  /**
+   * Get terminal configuration by ID
+   */
+  async getTerminalConfig(terminalId) {
+    if (!this.terminals) {
+      await this.loadTerminals();
+    }
+    return this.terminals.find(t => t.id === terminalId);
   }
 
   /**
@@ -204,6 +231,23 @@ class SecurityManager {
       await this.loadConfig();
     }
 
+    // Special handling for cd commands - validate against terminal's working directory
+    if (/^cd\s+/i.test(command.trim())) {
+      const cdCheck = await this.validateCdCommand(terminalId, command);
+      if (!cdCheck.allowed) {
+        await this.logSecurityEvent('DENIED_COMMAND', { 
+          terminalId, 
+          command, 
+          username, 
+          reason: cdCheck.reason 
+        });
+        return { allowed: false, reason: cdCheck.reason };
+      }
+      // If cd is allowed, log and return success
+      await this.logSecurityEvent('ALLOWED_COMMAND', { terminalId, command, username });
+      return { allowed: true };
+    }
+
     // Check global denied commands first
     if (this.config.commandFiltering.enabled) {
       // Check exact matches
@@ -281,6 +325,72 @@ class SecurityManager {
     
     const regex = new RegExp(`^${regexPattern}$`, 'i');
     return regex.test(command.trim());
+  }
+
+  /**
+   * Validate cd command is within allowed directory
+   * @param {string} terminalId - Terminal ID
+   * @param {string} command - The cd command to validate
+   * @returns {Promise<{allowed: boolean, reason?: string}>}
+   */
+  async validateCdCommand(terminalId, command) {
+    const terminalConfig = await this.getTerminalConfig(terminalId);
+    
+    if (!terminalConfig || !terminalConfig.workingDirectory) {
+      return { 
+        allowed: false, 
+        reason: 'Terminal has no configured working directory' 
+      };
+    }
+
+    // Extract the target path from cd command
+    const cdMatch = command.trim().match(/^cd\s+(.+)$/i);
+    if (!cdMatch) {
+      return { allowed: false, reason: 'Invalid cd command format' };
+    }
+
+    let targetPath = cdMatch[1].trim();
+    
+    // Remove quotes if present
+    targetPath = targetPath.replace(/^["']|["']$/g, '');
+    
+    // Get the base allowed directory
+    const baseDir = path.resolve(terminalConfig.workingDirectory);
+    
+    // Handle special cases
+    if (targetPath === '~' || targetPath === '~/') {
+      return { 
+        allowed: false, 
+        reason: 'Cannot navigate to home directory' 
+      };
+    }
+    
+    // Resolve the target path (handle relative paths, .., ., etc.)
+    let resolvedPath;
+    if (path.isAbsolute(targetPath)) {
+      resolvedPath = path.resolve(targetPath);
+    } else {
+      // Relative path - resolve from base directory
+      resolvedPath = path.resolve(baseDir, targetPath);
+    }
+    
+    // Normalize paths for comparison (handle different separators)
+    const normalizedBase = path.normalize(baseDir);
+    const normalizedTarget = path.normalize(resolvedPath);
+    
+    // Check if target is within allowed directory
+    // Use relative path to ensure target is a subdirectory of base
+    const relativePath = path.relative(normalizedBase, normalizedTarget);
+    
+    // If relative path starts with '..' or is absolute, it's outside the allowed directory
+    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+      return { 
+        allowed: false, 
+        reason: `Path '${targetPath}' is outside allowed directory '${baseDir}'` 
+      };
+    }
+    
+    return { allowed: true };
   }
 
   /**

@@ -43,6 +43,9 @@ Multiple layers of command filtering:
 - **Terminal-specific deny list**: Additional commands denied for specific terminals
 - **Approval required**: Commands that need admin approval
 - **Pattern matching**: Wildcard and regex support
+- **CD command restriction**: Special validation for `cd` commands to prevent directory escape
+
+**Note:** The `cd` command has special security handling. See [CD Command Security](./CD-COMMAND-SECURITY.md) for details.
 
 ### 3. User-Based Restrictions
 

@@ -22,6 +22,7 @@ Application web sécurisée pour gérer des sessions tmux et interagir avec des 
 - 🛡️ **Sécurité avancée** :
   - Restrictions par IP/réseau (CIDR)
   - Filtrage de commandes (whitelist/blacklist)
+  - Validation spéciale pour commande `cd` (empêche l'évasion de répertoire)
   - Limitations par utilisateur et terminal
   - Rate limiting anti-spam
   - Audit logging complet
@@ -299,6 +300,22 @@ sudo certbot --nginx -d votre-domaine.com
 
 ## 🛡️ Sécurité
 
+### Fonctionnalités de sécurité avancées
+
+Le système inclut des fonctionnalités de sécurité avancées pour protéger vos terminaux :
+
+- **Restrictions par IP/réseau** avec support CIDR
+- **Filtrage de commandes** (whitelist/blacklist) par terminal
+- **Commande `cd` sécurisée** : empêche la navigation hors du répertoire de travail configuré
+- **Limitations par utilisateur** et terminal
+- **Rate limiting** pour prévenir les abus
+- **Audit logging complet** de toutes les actions
+
+📚 **Documentation complète** :
+- [Guide de sécurité des terminaux](docs/TERMINAL-SECURITY.md)
+- [Sécurité de la commande CD](docs/CD-COMMAND-SECURITY.md)
+- [Guide de démarrage rapide](docs/SECURITY-QUICKSTART.md)
+
 ### Bonnes pratiques
 
 1. **Changez le JWT_SECRET** dans `.env` avec une valeur aléatoire forte
@@ -308,6 +325,7 @@ sudo certbot --nginx -d votre-domaine.com
 5. **Mises à jour régulières** : `npm update`
 6. **Firewall** : limitez l'accès au port 3000 ou utilisez un reverse proxy
 7. **Backups** : sauvegardez régulièrement `config/users.json` et `config/terminals.json`
+8. **Configurez la sécurité** : utilisez `config/security.json` pour définir les restrictions
 
 ### Protection rate limiting
 

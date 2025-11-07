@@ -15,6 +15,7 @@
     "minecraft-server": {
       "allowedIPs": ["192.168.1.0/24"],
       "allowedCommands": [
+        "cd *",
         "say *",
         "list",
         "whitelist *",
@@ -41,6 +42,7 @@
     },
     "backup-server": {
       "allowedCommands": [
+        "cd *",
         "./backup.sh",
         "./restore.sh *",
         "ls *",
@@ -56,6 +58,7 @@
     },
     "web-app": {
       "allowedCommands": [
+        "cd *",
         "npm run *",
         "pm2 status",
         "pm2 logs *",
