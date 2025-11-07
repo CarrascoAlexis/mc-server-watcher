@@ -413,6 +413,12 @@ body {
   font-size: 14px;
 }
 
+.terminal-input .btn {
+  padding: 12px 30px;
+  white-space: nowrap;
+  width: auto;
+}
+
 /* Admin Tabs */
 .admin-tab {
   display: none;
