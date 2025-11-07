@@ -1,0 +1,28 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Shell scripts should always use LF
+*.sh text eol=lf
+
+# JSON files
+*.json text
+
+# JavaScript files
+*.js text
+
+# CSS files
+*.css text
+
+# HTML files
+*.html text
+
+# Markdown files
+*.md text
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

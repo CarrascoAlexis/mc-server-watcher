@@ -1,0 +1,39 @@
+[Unit]
+Description=MC Server Watcher - Terminal Management System
+Documentation=https://github.com/CarrascoAlexis/mc-server-watcher
+After=network.target
+
+[Service]
+Type=simple
+
+# MODIFIER CES VALEURS SELON VOTRE CONFIGURATION
+User=VOTRE_UTILISATEUR
+Group=VOTRE_GROUPE
+WorkingDirectory=/chemin/complet/vers/mc-server-watcher
+
+# Variables d'environnement
+Environment=NODE_ENV=production
+Environment=PATH=/usr/bin:/usr/local/bin
+
+# Commande de démarrage
+ExecStart=/usr/bin/node server/index.js
+
+# Redémarrage automatique en cas de crash
+Restart=always
+RestartSec=10
+
+# Sécurité
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Limites de ressources (optionnel)
+# LimitNOFILE=65536
+# MemoryLimit=512M
+
+# Logs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mc-watcher
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+[
+  {
+    "id": "minecraft-server",
+    "name": "Minecraft Server",
+    "description": "Main Minecraft server console",
+    "sessionName": "mc-server",
+    "workingDirectory": "/path/to/minecraft/server",
+    "initialCommand": "",
+    "icon": "🎮"
+  }
+]

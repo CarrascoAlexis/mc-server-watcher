@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - MC Server Watcher</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>🎮 MC Watcher</h2>
+        <div class="user-info">
+          <span id="currentUser"></span>
+          <span id="userRole" class="badge"></span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <h3>Your Terminals</h3>
+        <ul id="terminalsList" class="terminals-list">
+          <!-- Terminals will be loaded here -->
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="adminPanelBtn" class="btn btn-secondary" style="display: none;">
+          ⚙️ Admin Panel
+        </button>
+        <button id="logoutBtn" class="btn btn-secondary">
+          🚪 Logout
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="terminal-container">
+        <div class="terminal-header">
+          <h2 id="terminalTitle">Select a terminal</h2>
+          <div class="terminal-actions">
+            <button id="clearBtn" class="btn btn-small" disabled>Clear</button>
+            <button id="reconnectBtn" class="btn btn-small" disabled>Reconnect</button>
+          </div>
+        </div>
+
+        <div id="terminalContent" class="terminal-content">
+          <div class="terminal-placeholder">
+            <p>👈 Select a terminal from the sidebar to start</p>
+          </div>
+        </div>
+
+        <div class="terminal-input" id="terminalInput" style="display: none;">
+          <input 
+            type="text" 
+            id="commandInput" 
+            placeholder="Enter command..."
+            autocomplete="off"
+          >
+          <button id="sendBtn" class="btn btn-primary">Send</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>
