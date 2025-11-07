@@ -44,8 +44,10 @@ function initializeSocket() {
 
   socket.on('terminal-output', (data) => {
     if (data.terminalId === currentTerminal && term) {
+      // Don't clear, just write new output
+      const lines = data.output.split('\n');
       term.clear();
-      term.write(data.output.replace(/\n/g, '\r\n'));
+      term.write(lines.join('\r\n'));
     }
   });
 
@@ -148,13 +150,53 @@ function initializeTerminal() {
       foreground: '#ffffff',
       cursor: '#4CAF50'
     },
-    rows: 30
+    rows: 30,
+    convertEol: true
   });
 
   fitAddon = new FitAddon.FitAddon();
   term.loadAddon(fitAddon);
   term.open(document.getElementById('terminal'));
   fitAddon.fit();
+
+  // Buffer for current line input
+  let currentLine = '';
+
+  // Handle key input in terminal
+  term.onData(data => {
+    if (!currentTerminal) return;
+
+    // Handle special keys
+    if (data === '\r') {
+      // Enter key - send command
+      term.write('\r\n');
+      if (currentLine.trim()) {
+        socket.emit('send-command', {
+          terminalId: currentTerminal,
+          command: currentLine
+        });
+      }
+      currentLine = '';
+    } else if (data === '\u007F') {
+      // Backspace
+      if (currentLine.length > 0) {
+        currentLine = currentLine.slice(0, -1);
+        term.write('\b \b');
+      }
+    } else if (data === '\u0003') {
+      // Ctrl+C
+      socket.emit('send-command', {
+        terminalId: currentTerminal,
+        command: '\u0003'
+      });
+      currentLine = '';
+      term.write('^C\r\n');
+    } else {
+      // Regular character
+      currentLine += data;
+      term.write(data);
+    }
+  });
 
   // Handle terminal resize
   window.addEventListener('resize', () => {
