@@ -37,8 +37,7 @@
         "pardon *",
         "give *"
       ],
-      "maxCommandsPerMinute": 10,
-      "allowedUsers": ["admin", "moderator"]
+      "maxCommandsPerMinute": 10
     },
     "backup-server": {
       "allowedCommands": [
@@ -87,8 +86,7 @@
         "git push origin master",
         "chmod *"
       ],
-      "maxCommandsPerMinute": 20,
-      "allowedUsers": ["admin"]
+      "maxCommandsPerMinute": 20
     },
     "web-app": {
       "allowedCommands": [
@@ -134,8 +132,7 @@
         "pm2 restart all",
         "pm2 stop all"
       ],
-      "maxCommandsPerMinute": 15,
-      "allowedUsers": ["admin", "developer"]
+      "maxCommandsPerMinute": 15
     }
   },
   "commandFiltering": {
