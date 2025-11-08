@@ -13,9 +13,10 @@
   },
   "terminalRestrictions": {
     "minecraft-server": {
-      "allowedIPs": ["192.168.1.0/24"],
       "allowedCommands": [
         "cd *",
+        "java *",
+        "stop",
         "say *",
         "list",
         "whitelist *",
@@ -28,7 +29,6 @@
         "gamemode * *"
       ],
       "deniedCommands": [
-        "stop",
         "op *",
         "deop *"
       ],

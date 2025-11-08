@@ -231,6 +231,12 @@ class SecurityManager {
       await this.loadConfig();
     }
 
+    // Special handling for Ctrl+C (stop signal) - always allow for stop operations
+    if (command === '\x03') {
+      await this.logSecurityEvent('ALLOWED_COMMAND', { terminalId, command: 'Ctrl+C', username });
+      return { allowed: true };
+    }
+
     // Special handling for cd commands - validate against terminal's working directory
     if (/^cd\s+/i.test(command.trim())) {
       const cdCheck = await this.validateCdCommand(terminalId, command);
