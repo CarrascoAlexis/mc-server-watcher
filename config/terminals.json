@@ -14,7 +14,7 @@
     "description": "Terminal management web application (this project)",
     "sessionName": "web-app",
     "workingDirectory": "~/Documents/mc-server-watcher",
-    "initialCommand": "",
+    "initialCommand": "npm start",
     "icon": "🌐"
   },
   {

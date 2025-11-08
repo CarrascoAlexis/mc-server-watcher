@@ -388,6 +388,16 @@ body {
   padding: 10px;
 }
 
+/* Hide xterm cursor when terminal is not focused */
+.xterm-cursor-layer {
+  display: none !important;
+}
+
+/* Show cursor only when terminal has focus */
+.xterm.focus .xterm-cursor-layer {
+  display: block !important;
+}
+
 .terminal-input {
   position: fixed;
   bottom: 0;
