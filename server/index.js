@@ -899,9 +899,22 @@ io.on('connection', (socket) => {
       }
 
       // Get current directory for CD command validation
-      const currentDir = /^cd\s+/i.test(command) 
-        ? await tmuxManager.getCurrentDirectory(terminalId) 
-        : null;
+      let currentDir = null;
+      if (/^cd\s+/i.test(command.trim())) {
+        try {
+          const terminals = await tmuxManager.loadTerminalsConfig();
+          const terminal = terminals.find(t => t.id === terminalId);
+          if (terminal) {
+            const sessionName = terminal.sessionName || terminal.id;
+            const sessionExists = await tmuxManager.sessionExists(sessionName);
+            if (sessionExists) {
+              currentDir = await tmuxManager.getCurrentDirectory(sessionName);
+            }
+          }
+        } catch (error) {
+          console.warn('Could not get current directory:', error.message);
+        }
+      }
 
       // Security validation
       const clientIP = socket.handshake.address;
