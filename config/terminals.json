@@ -4,8 +4,26 @@
     "name": "Minecraft Server",
     "description": "Main Minecraft server console",
     "sessionName": "mc-server",
-    "workingDirectory": "/path/to/minecraft/server",
+    "workingDirectory": "~/MCServer",
     "initialCommand": "",
     "icon": "🎮"
+  },
+  {
+    "id": "web-app",
+    "name": "MC Server Watcher App",
+    "description": "Terminal management web application (this project)",
+    "sessionName": "web-app",
+    "workingDirectory": "~/Documents/mc-server-watcher",
+    "initialCommand": "",
+    "icon": "🌐"
+  },
+  {
+    "id": "backup-server",
+    "name": "Backup & Git Management",
+    "description": "Manage git repositories and backup terminal configurations",
+    "sessionName": "backup-mgmt",
+    "workingDirectory": "~",
+    "initialCommand": "",
+    "icon": "💾"
   }
 ]

@@ -43,33 +43,96 @@
     "backup-server": {
       "allowedCommands": [
         "cd *",
-        "./backup.sh",
-        "./restore.sh *",
         "ls *",
-        "du -h *"
+        "pwd",
+        "cat *",
+        "less *",
+        "tail *",
+        "head *",
+        "grep *",
+        "find *",
+        "du -h *",
+        "df -h",
+        "git status",
+        "git log *",
+        "git diff *",
+        "git show *",
+        "git branch *",
+        "git remote *",
+        "git pull",
+        "git fetch *",
+        "git add *",
+        "git commit *",
+        "git push *",
+        "tar -czf *",
+        "tar -xzf *",
+        "zip *",
+        "unzip *",
+        "cp *",
+        "mkdir *",
+        "rsync *",
+        "./backup.sh *",
+        "./restore.sh *"
       ],
       "deniedCommands": [
+        "rm -rf *",
+        "git reset --hard *",
+        "git clean -fd",
+        "chmod -R *"
+      ],
+      "requiresApproval": [
         "rm *",
         "mv *",
+        "git push origin main",
+        "git push origin master",
         "chmod *"
       ],
-      "maxCommandsPerMinute": 5,
+      "maxCommandsPerMinute": 20,
       "allowedUsers": ["admin"]
     },
     "web-app": {
       "allowedCommands": [
         "cd *",
+        "ls *",
+        "pwd",
+        "cat *",
+        "less *",
+        "tail *",
+        "head *",
+        "grep *",
         "npm run *",
+        "npm start",
+        "npm test",
+        "npm run dev",
+        "npm run build",
+        "node *",
         "pm2 status",
         "pm2 logs *",
         "pm2 restart *",
+        "pm2 stop *",
+        "pm2 list",
+        "pm2 monit",
+        "git status",
         "git pull",
-        "git status"
+        "git fetch",
+        "git log *",
+        "git diff *",
+        "git branch",
+        "git show *"
       ],
       "deniedCommands": [
         "npm install *",
+        "npm uninstall *",
         "rm *",
-        "git push *"
+        "git push *",
+        "git reset *",
+        "pm2 delete *"
+      ],
+      "requiresApproval": [
+        "npm ci",
+        "npm update",
+        "pm2 restart all",
+        "pm2 stop all"
       ],
       "maxCommandsPerMinute": 15,
       "allowedUsers": ["admin", "developer"]
