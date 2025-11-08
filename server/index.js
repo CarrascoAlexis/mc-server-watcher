@@ -898,6 +898,11 @@ io.on('connection', (socket) => {
         return;
       }
 
+      // Get current directory for CD command validation
+      const currentDir = /^cd\s+/i.test(command) 
+        ? await tmuxManager.getCurrentDirectory(terminalId) 
+        : null;
+
       // Security validation
       const clientIP = socket.handshake.address;
       const username = socket.user.username;
@@ -906,7 +911,8 @@ io.on('connection', (socket) => {
         terminalId,
         username,
         clientIP,
-        command
+        command,
+        currentDir
       );
 
       if (!securityCheck.allowed) {

@@ -21,11 +21,13 @@ Each terminal now supports these fields:
 ## Button Behavior
 
 ### ▶️ Start Button
+
 - **Shows when:** `startCommand` is configured
 - **Does:** Executes the `startCommand`
 - **Example:** `npm start`, `java -jar server.jar`
 
 ### ⏹️ Stop Button
+
 - **Shows when:** Always (for any terminal)
 - **Does:** 
   - If `stopCommand` configured: runs that command
@@ -33,6 +35,7 @@ Each terminal now supports these fields:
 - **Example:** `stop` (for Minecraft), or Ctrl+C for most apps
 
 ### 🔄 Restart Button
+
 - **Shows when:** Has `restartCommand` OR (`stopCommand` OR `startCommand`)
 - **Does:**
   - If `restartCommand`: runs that command
@@ -40,6 +43,7 @@ Each terminal now supports these fields:
 - **Example:** Custom restart script or automatic stop+start
 
 ### 📥 Pull & Restart Button
+
 - **Shows when:** `hasGitRepo: true` AND has `startCommand`
 - **Does:** 
   1. Stops the server
@@ -50,6 +54,7 @@ Each terminal now supports these fields:
 ## Terminal Examples
 
 ### Web Application (Node.js)
+
 ```json
 {
   "id": "web-app",
@@ -61,6 +66,7 @@ Each terminal now supports these fields:
 ```
 
 ### Minecraft Server
+
 ```json
 {
   "id": "minecraft-server",
@@ -72,6 +78,7 @@ Each terminal now supports these fields:
 ```
 
 ### Custom Service
+
 ```json
 {
   "id": "my-service",
@@ -85,6 +92,7 @@ Each terminal now supports these fields:
 ## Security
 
 All control actions go through:
+
 1. ✅ Authentication check
 2. ✅ Command security validation
 3. ✅ User permissions check
@@ -96,24 +104,28 @@ Commands are validated against `config/security.json` restrictions.
 ## API Endpoints
 
 ### Start Server
+
 ```
 POST /api/terminal/start
 Body: { terminalId: "terminal-id" }
 ```
 
 ### Stop Server
+
 ```
 POST /api/terminal/stop
 Body: { terminalId: "terminal-id" }
 ```
 
 ### Restart Server
+
 ```
 POST /api/terminal/restart
 Body: { terminalId: "terminal-id" }
 ```
 
 ### Git Pull & Restart
+
 ```
 POST /api/terminal/git-pull-restart
 Body: { terminalId: "terminal-id" }
@@ -133,18 +145,21 @@ Buttons appear in the terminal header:
 ## Typical Workflow
 
 ### Deploy Updates (Git-based app)
+
 1. Click **📥 Pull & Restart**
 2. Confirm dialog
 3. Server stops → git pull → server starts
 4. Success notification
 
 ### Quick Restart
+
 1. Click **🔄 Restart**
 2. Confirm dialog
 3. Server restarts
 4. Success notification
 
 ### Manual Control
+
 1. Click **⏹️ Stop** to stop
 2. Wait for process to stop
 3. Click **▶️ Start** to start
