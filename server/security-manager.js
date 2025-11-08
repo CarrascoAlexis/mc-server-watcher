@@ -226,7 +226,7 @@ class SecurityManager {
   /**
    * Check if command is allowed for a terminal
    */
-  async isCommandAllowed(terminalId, command, username) {
+  async isCommandAllowed(terminalId, command, username, currentDir = null) {
     if (!this.config) {
       await this.loadConfig();
     }
@@ -239,7 +239,7 @@ class SecurityManager {
 
     // Special handling for cd commands - validate against terminal's working directory
     if (/^cd\s+/i.test(command.trim())) {
-      const cdCheck = await this.validateCdCommand(terminalId, command);
+      const cdCheck = await this.validateCdCommand(terminalId, command, currentDir);
       if (!cdCheck.allowed) {
         await this.logSecurityEvent('DENIED_COMMAND', { 
           terminalId, 
@@ -337,9 +337,10 @@ class SecurityManager {
    * Validate cd command is within allowed directory
    * @param {string} terminalId - Terminal ID
    * @param {string} command - The cd command to validate
+   * @param {string} currentDir - Current working directory (optional, will be fetched if not provided)
    * @returns {Promise<{allowed: boolean, reason?: string}>}
    */
-  async validateCdCommand(terminalId, command) {
+  async validateCdCommand(terminalId, command, currentDir = null) {
     const terminalConfig = await this.getTerminalConfig(terminalId);
     
     if (!terminalConfig || !terminalConfig.workingDirectory) {
@@ -363,7 +364,7 @@ class SecurityManager {
     // Get the base allowed directory
     const baseDir = path.resolve(terminalConfig.workingDirectory);
     
-    // Handle special cases
+    // Handle special cases that should be denied
     if (targetPath === '~' || targetPath === '~/') {
       return { 
         allowed: false, 
@@ -371,29 +372,46 @@ class SecurityManager {
       };
     }
     
-    // Resolve the target path (handle relative paths, .., ., etc.)
+    // For relative paths, we need to know current directory
     let resolvedPath;
     if (path.isAbsolute(targetPath)) {
       resolvedPath = path.resolve(targetPath);
     } else {
-      // Relative path - resolve from base directory
-      resolvedPath = path.resolve(baseDir, targetPath);
+      // If currentDir not provided, we need to get it from tmux
+      if (!currentDir) {
+        // For now, assume workingDirectory as current (will be enhanced with tmux integration)
+        // In practice, the API will pass currentDir from tmux
+        currentDir = baseDir;
+      }
+      
+      // Resolve relative path from current directory
+      resolvedPath = path.resolve(currentDir, targetPath);
     }
     
-    // Normalize paths for comparison (handle different separators)
+    // Normalize paths for comparison
     const normalizedBase = path.normalize(baseDir);
     const normalizedTarget = path.normalize(resolvedPath);
     
     // Check if target is within allowed directory
-    // Use relative path to ensure target is a subdirectory of base
     const relativePath = path.relative(normalizedBase, normalizedTarget);
     
     // If relative path starts with '..' or is absolute, it's outside the allowed directory
     if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
       return { 
         allowed: false, 
-        reason: `Path '${targetPath}' is outside allowed directory '${baseDir}'` 
+        reason: `Cannot navigate outside working directory '${baseDir}'` 
       };
+    }
+    
+    // Special check: if resolved path equals base directory and we're going up (..)
+    // Only allow if current directory is NOT the base directory
+    if (targetPath === '..' && normalizedTarget === normalizedBase) {
+      if (currentDir && path.normalize(currentDir) === normalizedBase) {
+        return {
+          allowed: false,
+          reason: 'Already at working directory root, cannot go up'
+        };
+      }
     }
     
     return { allowed: true };
@@ -446,7 +464,10 @@ class SecurityManager {
   /**
    * Validate terminal access (combines all checks)
    */
-  async validateAccess(terminalId, username, clientIP, command = null) {
+  /**
+   * Main access validation
+   */
+  async validateAccess(terminalId, username, clientIP, command = null, currentDir = null) {
     const results = {
       allowed: true,
       reasons: []
@@ -481,7 +502,7 @@ class SecurityManager {
 
     // Check command if provided
     if (command) {
-      const commandCheck = await this.isCommandAllowed(terminalId, command, username);
+      const commandCheck = await this.isCommandAllowed(terminalId, command, username, currentDir);
       if (!commandCheck.allowed) {
         results.allowed = false;
         results.reasons.push(commandCheck.reason);

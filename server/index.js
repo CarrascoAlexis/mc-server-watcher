@@ -230,11 +230,30 @@ app.post('/api/execute-channel',
       const clientIP = getClientIP(req);
       const username = req.user.username;
       
+      // Get current directory for cd command validation
+      let currentDir = null;
+      if (/^cd\s+/i.test(command.trim())) {
+        try {
+          const terminals = await tmuxManager.loadTerminalsConfig(configPath);
+          const terminal = terminals.find(t => t.id === terminalId);
+          if (terminal) {
+            const sessionName = terminal.sessionName || terminal.id;
+            const sessionExists = await tmuxManager.sessionExists(sessionName);
+            if (sessionExists) {
+              currentDir = await tmuxManager.getCurrentDirectory(sessionName);
+            }
+          }
+        } catch (error) {
+          console.warn('Could not get current directory:', error.message);
+        }
+      }
+      
       const securityCheck = await securityManager.validateAccess(
         terminalId,
         username,
         clientIP,
-        command
+        command,
+        currentDir
       );
 
       if (!securityCheck.allowed) {

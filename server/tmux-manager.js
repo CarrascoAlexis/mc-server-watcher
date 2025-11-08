@@ -78,6 +78,26 @@ class TmuxManager {
   }
 
   /**
+   * Get current working directory of a tmux session
+   * @param {string} sessionName - Tmux session name
+   * @returns {Promise<string>} Current working directory
+   */
+  async getCurrentDirectory(sessionName) {
+    try {
+      // Send pwd command and capture output
+      const output = await this.execTmux([
+        'display-message',
+        '-t', sessionName,
+        '-p',
+        '#{pane_current_path}'
+      ]);
+      return output.trim();
+    } catch (error) {
+      throw new Error(`Failed to get current directory: ${error.message}`);
+    }
+  }
+
+  /**
    * Create or attach to tmux session
    * @param {string} terminalId - Terminal ID
    * @param {string} configPath - Optional custom config file path
