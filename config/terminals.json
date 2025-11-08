@@ -6,6 +6,10 @@
     "sessionName": "mc-server",
     "workingDirectory": "~/MCServer",
     "initialCommand": "",
+    "startCommand": "java -Xms2G -Xmx2G -jar folia-1.21.8-6.jar nogui",
+    "stopCommand": "stop",
+    "restartCommand": "",
+    "hasGitRepo": false,
     "icon": "🎮"
   },
   {
@@ -14,7 +18,11 @@
     "description": "Terminal management web application (this project)",
     "sessionName": "web-app",
     "workingDirectory": "~/Documents/mc-server-watcher",
-    "initialCommand": "npm start",
+    "initialCommand": "",
+    "startCommand": "npm start",
+    "stopCommand": "",
+    "restartCommand": "",
+    "hasGitRepo": true,
     "icon": "🌐"
   },
   {
@@ -24,6 +32,10 @@
     "sessionName": "backup-mgmt",
     "workingDirectory": "~",
     "initialCommand": "",
+    "startCommand": "",
+    "stopCommand": "",
+    "restartCommand": "",
+    "hasGitRepo": false,
     "icon": "💾"
   }
 ]

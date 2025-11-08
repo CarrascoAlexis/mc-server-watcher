@@ -185,6 +185,33 @@ body {
   background: #da190b;
 }
 
+.btn-success {
+  background: var(--primary-color);
+  color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #45a049;
+}
+
+.btn-warning {
+  background: #ff9800;
+  color: white;
+}
+
+.btn-warning:hover:not(:disabled) {
+  background: #e68900;
+}
+
+.btn-info {
+  background: #2196f3;
+  color: white;
+}
+
+.btn-info:hover:not(:disabled) {
+  background: #0b7dda;
+}
+
 .btn-small {
   padding: 8px 16px;
   font-size: 12px;
@@ -362,7 +389,9 @@ body {
 
 .terminal-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .terminal-content {

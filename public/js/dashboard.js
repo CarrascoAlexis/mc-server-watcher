@@ -1,6 +1,7 @@
 // Dashboard functionality
 let socket = null;
 let currentTerminal = null;
+let currentTerminalData = null;
 let term = null;
 let fitAddon = null;
 
@@ -125,6 +126,10 @@ function selectTerminal(terminal) {
   }
 
   currentTerminal = terminal.id;
+  currentTerminalData = terminal;
+
+  // Update control buttons based on terminal config
+  updateControlButtons(terminal);
 
   // Initialize xterm.js
   initializeTerminal();
@@ -134,6 +139,27 @@ function selectTerminal(terminal) {
 
   // Show input
   document.getElementById('terminalInput').style.display = 'flex';
+}
+
+// Update control buttons visibility
+function updateControlButtons(terminal) {
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const gitPullBtn = document.getElementById('gitPullBtn');
+
+  // Enable/disable buttons based on config
+  startBtn.disabled = !terminal.startCommand;
+  stopBtn.disabled = false; // Always allow stop (will use Ctrl+C if no command)
+  restartBtn.disabled = !(terminal.restartCommand || (terminal.stopCommand || terminal.startCommand));
+  
+  // Show git pull button only if terminal has a repo
+  if (terminal.hasGitRepo && terminal.startCommand) {
+    gitPullBtn.style.display = 'inline-flex';
+    gitPullBtn.disabled = false;
+  } else {
+    gitPullBtn.style.display = 'none';
+  }
 }
 
 // Initialize xterm.js terminal
@@ -229,6 +255,141 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 
 document.getElementById('adminPanelBtn').addEventListener('click', () => {
   window.location.href = '/admin.html';
+});
+
+// Control buttons
+document.getElementById('startBtn').addEventListener('click', async () => {
+  if (!currentTerminal) return;
+  
+  const btn = document.getElementById('startBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Starting...';
+  
+  try {
+    const response = await fetch('/api/terminal/start', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ terminalId: currentTerminal })
+    });
+
+    const data = await response.json();
+    
+    if (response.ok) {
+      alert('✅ Server started successfully');
+    } else {
+      alert('❌ ' + (data.error || 'Failed to start server'));
+    }
+  } catch (error) {
+    alert('❌ Error: ' + error.message);
+  } finally {
+    btn.disabled = !currentTerminalData?.startCommand;
+    btn.textContent = '▶️ Start';
+  }
+});
+
+document.getElementById('stopBtn').addEventListener('click', async () => {
+  if (!currentTerminal) return;
+  
+  if (!confirm('Are you sure you want to stop the server?')) return;
+  
+  const btn = document.getElementById('stopBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Stopping...';
+  
+  try {
+    const response = await fetch('/api/terminal/stop', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ terminalId: currentTerminal })
+    });
+
+    const data = await response.json();
+    
+    if (response.ok) {
+      alert('✅ Server stopped successfully');
+    } else {
+      alert('❌ ' + (data.error || 'Failed to stop server'));
+    }
+  } catch (error) {
+    alert('❌ Error: ' + error.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⏹️ Stop';
+  }
+});
+
+document.getElementById('restartBtn').addEventListener('click', async () => {
+  if (!currentTerminal) return;
+  
+  if (!confirm('Are you sure you want to restart the server?')) return;
+  
+  const btn = document.getElementById('restartBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Restarting...';
+  
+  try {
+    const response = await fetch('/api/terminal/restart', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ terminalId: currentTerminal })
+    });
+
+    const data = await response.json();
+    
+    if (response.ok) {
+      alert('✅ Server restarted successfully');
+    } else {
+      alert('❌ ' + (data.error || 'Failed to restart server'));
+    }
+  } catch (error) {
+    alert('❌ Error: ' + error.message);
+  } finally {
+    btn.disabled = !(currentTerminalData?.restartCommand || (currentTerminalData?.stopCommand || currentTerminalData?.startCommand));
+    btn.textContent = '🔄 Restart';
+  }
+});
+
+document.getElementById('gitPullBtn').addEventListener('click', async () => {
+  if (!currentTerminal) return;
+  
+  if (!confirm('This will stop the server, pull latest changes, and restart. Continue?')) return;
+  
+  const btn = document.getElementById('gitPullBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Updating...';
+  
+  try {
+    const response = await fetch('/api/terminal/git-pull-restart', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ terminalId: currentTerminal })
+    });
+
+    const data = await response.json();
+    
+    if (response.ok) {
+      alert('✅ Git pulled and server restarted successfully');
+    } else {
+      alert('❌ ' + (data.error || 'Failed to pull and restart'));
+    }
+  } catch (error) {
+    alert('❌ Error: ' + error.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📥 Pull & Restart';
+  }
 });
 
 // Initialize

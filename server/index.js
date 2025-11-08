@@ -372,6 +372,282 @@ app.post('/api/execute-all-channels',
   }
 );
 
+// ==================== TERMINAL CONTROL ROUTES ====================
+
+/**
+ * Start a terminal server
+ * Body: { terminalId }
+ */
+app.post('/api/terminal/start',
+  authManager.verifyTokenMiddleware(),
+  async (req, res) => {
+    try {
+      const { terminalId } = req.body;
+
+      if (!terminalId) {
+        return res.status(400).json({ error: 'terminalId is required' });
+      }
+
+      const terminals = await tmuxManager.loadTerminalsConfig();
+      const terminal = terminals.find(t => t.id === terminalId);
+
+      if (!terminal) {
+        return res.status(404).json({ error: 'Terminal not found' });
+      }
+
+      if (!terminal.startCommand) {
+        return res.status(400).json({ error: 'No start command configured for this terminal' });
+      }
+
+      // Security validation
+      const clientIP = getClientIP(req);
+      const username = req.user.username;
+      
+      const securityCheck = await securityManager.validateAccess(
+        terminalId,
+        username,
+        clientIP,
+        terminal.startCommand
+      );
+
+      if (!securityCheck.allowed) {
+        return res.status(403).json({ 
+          error: 'Access denied',
+          reasons: securityCheck.reasons
+        });
+      }
+
+      const result = await tmuxManager.executeOnChannel(terminalId, terminal.startCommand);
+      res.json({ success: true, message: 'Server started', ...result });
+    } catch (error) {
+      console.error('Start server error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * Stop a terminal server
+ * Body: { terminalId }
+ */
+app.post('/api/terminal/stop',
+  authManager.verifyTokenMiddleware(),
+  async (req, res) => {
+    try {
+      const { terminalId } = req.body;
+
+      if (!terminalId) {
+        return res.status(400).json({ error: 'terminalId is required' });
+      }
+
+      const terminals = await tmuxManager.loadTerminalsConfig();
+      const terminal = terminals.find(t => t.id === terminalId);
+
+      if (!terminal) {
+        return res.status(404).json({ error: 'Terminal not found' });
+      }
+
+      const clientIP = getClientIP(req);
+      const username = req.user.username;
+
+      let command;
+      if (terminal.stopCommand) {
+        command = terminal.stopCommand;
+        
+        const securityCheck = await securityManager.validateAccess(
+          terminalId,
+          username,
+          clientIP,
+          command
+        );
+
+        if (!securityCheck.allowed) {
+          return res.status(403).json({ 
+            error: 'Access denied',
+            reasons: securityCheck.reasons
+          });
+        }
+
+        const result = await tmuxManager.executeOnChannel(terminalId, command);
+        res.json({ success: true, message: 'Server stopped', ...result });
+      } else {
+        // Simulate Ctrl+C by sending SIGINT
+        command = '\x03'; // Ctrl+C character
+        const result = await tmuxManager.executeOnChannel(terminalId, command);
+        res.json({ success: true, message: 'Server stopped (Ctrl+C sent)', ...result });
+      }
+    } catch (error) {
+      console.error('Stop server error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * Restart a terminal server
+ * Body: { terminalId }
+ */
+app.post('/api/terminal/restart',
+  authManager.verifyTokenMiddleware(),
+  async (req, res) => {
+    try {
+      const { terminalId } = req.body;
+
+      if (!terminalId) {
+        return res.status(400).json({ error: 'terminalId is required' });
+      }
+
+      const terminals = await tmuxManager.loadTerminalsConfig();
+      const terminal = terminals.find(t => t.id === terminalId);
+
+      if (!terminal) {
+        return res.status(404).json({ error: 'Terminal not found' });
+      }
+
+      const clientIP = getClientIP(req);
+      const username = req.user.username;
+
+      if (terminal.restartCommand) {
+        // Use custom restart command
+        const securityCheck = await securityManager.validateAccess(
+          terminalId,
+          username,
+          clientIP,
+          terminal.restartCommand
+        );
+
+        if (!securityCheck.allowed) {
+          return res.status(403).json({ 
+            error: 'Access denied',
+            reasons: securityCheck.reasons
+          });
+        }
+
+        const result = await tmuxManager.executeOnChannel(terminalId, terminal.restartCommand);
+        res.json({ success: true, message: 'Server restarted', ...result });
+      } else if (terminal.stopCommand || terminal.startCommand) {
+        // Default restart: stop, then start
+        const results = [];
+
+        // Stop
+        if (terminal.stopCommand) {
+          const stopCheck = await securityManager.validateAccess(
+            terminalId, username, clientIP, terminal.stopCommand
+          );
+          if (!stopCheck.allowed) {
+            return res.status(403).json({ error: 'Access denied for stop', reasons: stopCheck.reasons });
+          }
+          const stopResult = await tmuxManager.executeOnChannel(terminalId, terminal.stopCommand);
+          results.push({ action: 'stop', ...stopResult });
+        } else {
+          const stopResult = await tmuxManager.executeOnChannel(terminalId, '\x03');
+          results.push({ action: 'stop', ...stopResult });
+        }
+
+        // Wait a bit
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Start
+        if (terminal.startCommand) {
+          const startCheck = await securityManager.validateAccess(
+            terminalId, username, clientIP, terminal.startCommand
+          );
+          if (!startCheck.allowed) {
+            return res.status(403).json({ error: 'Access denied for start', reasons: startCheck.reasons });
+          }
+          const startResult = await tmuxManager.executeOnChannel(terminalId, terminal.startCommand);
+          results.push({ action: 'start', ...startResult });
+        }
+
+        res.json({ success: true, message: 'Server restarted', results });
+      } else {
+        return res.status(400).json({ error: 'No restart, stop, or start command configured' });
+      }
+    } catch (error) {
+      console.error('Restart server error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * Git pull and restart
+ * Body: { terminalId }
+ */
+app.post('/api/terminal/git-pull-restart',
+  authManager.verifyTokenMiddleware(),
+  async (req, res) => {
+    try {
+      const { terminalId } = req.body;
+
+      if (!terminalId) {
+        return res.status(400).json({ error: 'terminalId is required' });
+      }
+
+      const terminals = await tmuxManager.loadTerminalsConfig();
+      const terminal = terminals.find(t => t.id === terminalId);
+
+      if (!terminal) {
+        return res.status(404).json({ error: 'Terminal not found' });
+      }
+
+      if (!terminal.hasGitRepo) {
+        return res.status(400).json({ error: 'Terminal does not have a git repository' });
+      }
+
+      const clientIP = getClientIP(req);
+      const username = req.user.username;
+      const results = [];
+
+      // Stop server
+      if (terminal.stopCommand) {
+        const stopCheck = await securityManager.validateAccess(
+          terminalId, username, clientIP, terminal.stopCommand
+        );
+        if (stopCheck.allowed) {
+          const stopResult = await tmuxManager.executeOnChannel(terminalId, terminal.stopCommand);
+          results.push({ action: 'stop', ...stopResult });
+        }
+      } else {
+        const stopResult = await tmuxManager.executeOnChannel(terminalId, '\x03');
+        results.push({ action: 'stop', ...stopResult });
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Git pull
+      const gitPullCheck = await securityManager.validateAccess(
+        terminalId, username, clientIP, 'git pull'
+      );
+      if (!gitPullCheck.allowed) {
+        return res.status(403).json({ error: 'Access denied for git pull', reasons: gitPullCheck.reasons });
+      }
+      
+      const gitResult = await tmuxManager.executeOnChannel(terminalId, 'git pull');
+      results.push({ action: 'git-pull', ...gitResult });
+
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Start server
+      if (terminal.startCommand) {
+        const startCheck = await securityManager.validateAccess(
+          terminalId, username, clientIP, terminal.startCommand
+        );
+        if (!startCheck.allowed) {
+          return res.status(403).json({ error: 'Access denied for start', reasons: startCheck.reasons });
+        }
+        const startResult = await tmuxManager.executeOnChannel(terminalId, terminal.startCommand);
+        results.push({ action: 'start', ...startResult });
+      }
+
+      res.json({ success: true, message: 'Git pulled and server restarted', results });
+    } catch (error) {
+      console.error('Git pull restart error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
 // ==================== STARTUP TASKS ROUTES ====================
 
 /**
