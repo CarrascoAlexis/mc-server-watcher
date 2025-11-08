@@ -343,7 +343,14 @@ class SecurityManager {
   async validateCdCommand(terminalId, command, currentDir = null) {
     const terminalConfig = await this.getTerminalConfig(terminalId);
     
+    console.log('[CD DEBUG] ========== CD VALIDATION START ==========');
+    console.log('[CD DEBUG] Terminal ID:', terminalId);
+    console.log('[CD DEBUG] Command:', command);
+    console.log('[CD DEBUG] Current Dir (param):', currentDir);
+    console.log('[CD DEBUG] Terminal Config:', terminalConfig);
+    
     if (!terminalConfig || !terminalConfig.workingDirectory) {
+      console.log('[CD DEBUG] ❌ DENIED: No working directory configured');
       return { 
         allowed: false, 
         reason: 'Terminal has no configured working directory' 
@@ -353,6 +360,7 @@ class SecurityManager {
     // Extract the target path from cd command
     const cdMatch = command.trim().match(/^cd\s+(.+)$/i);
     if (!cdMatch) {
+      console.log('[CD DEBUG] ❌ DENIED: Invalid cd command format');
       return { allowed: false, reason: 'Invalid cd command format' };
     }
 
@@ -360,12 +368,15 @@ class SecurityManager {
     
     // Remove quotes if present
     targetPath = targetPath.replace(/^["']|["']$/g, '');
+    console.log('[CD DEBUG] Target path:', targetPath);
     
     // Get the base allowed directory
     const baseDir = path.resolve(terminalConfig.workingDirectory);
+    console.log('[CD DEBUG] Base directory:', baseDir);
     
     // Handle special cases that should be denied
     if (targetPath === '~' || targetPath === '~/') {
+      console.log('[CD DEBUG] ❌ DENIED: Home directory navigation not allowed');
       return { 
         allowed: false, 
         reason: 'Cannot navigate to home directory' 
@@ -376,27 +387,36 @@ class SecurityManager {
     let resolvedPath;
     if (path.isAbsolute(targetPath)) {
       resolvedPath = path.resolve(targetPath);
+      console.log('[CD DEBUG] Absolute path detected:', resolvedPath);
     } else {
       // If currentDir not provided, we need to get it from tmux
       if (!currentDir) {
         // For now, assume workingDirectory as current (will be enhanced with tmux integration)
         // In practice, the API will pass currentDir from tmux
         currentDir = baseDir;
+        console.log('[CD DEBUG] ⚠️  Current dir not provided, using base dir:', currentDir);
+      } else {
+        console.log('[CD DEBUG] Current dir provided:', currentDir);
       }
       
       // Resolve relative path from current directory
       resolvedPath = path.resolve(currentDir, targetPath);
+      console.log('[CD DEBUG] Resolved path:', resolvedPath);
     }
     
     // Normalize paths for comparison
     const normalizedBase = path.normalize(baseDir);
     const normalizedTarget = path.normalize(resolvedPath);
+    console.log('[CD DEBUG] Normalized base:', normalizedBase);
+    console.log('[CD DEBUG] Normalized target:', normalizedTarget);
     
     // Check if target is within allowed directory
     const relativePath = path.relative(normalizedBase, normalizedTarget);
+    console.log('[CD DEBUG] Relative path from base to target:', relativePath);
     
     // If relative path starts with '..' or is absolute, it's outside the allowed directory
     if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+      console.log('[CD DEBUG] ❌ DENIED: Outside working directory');
       return { 
         allowed: false, 
         reason: `Cannot navigate outside working directory '${baseDir}'` 
@@ -406,7 +426,14 @@ class SecurityManager {
     // Special check: if resolved path equals base directory and we're going up (..)
     // Only allow if current directory is NOT the base directory
     if (targetPath === '..' && normalizedTarget === normalizedBase) {
-      if (currentDir && path.normalize(currentDir) === normalizedBase) {
+      const currentNormalized = currentDir ? path.normalize(currentDir) : null;
+      console.log('[CD DEBUG] Special check - trying to go up to base dir');
+      console.log('[CD DEBUG] Current normalized:', currentNormalized);
+      console.log('[CD DEBUG] Base normalized:', normalizedBase);
+      console.log('[CD DEBUG] Are they equal?', currentNormalized === normalizedBase);
+      
+      if (currentDir && currentNormalized === normalizedBase) {
+        console.log('[CD DEBUG] ❌ DENIED: Already at working directory root');
         return {
           allowed: false,
           reason: 'Already at working directory root, cannot go up'
@@ -414,6 +441,8 @@ class SecurityManager {
       }
     }
     
+    console.log('[CD DEBUG] ✅ ALLOWED');
+    console.log('[CD DEBUG] ========== CD VALIDATION END ==========');
     return { allowed: true };
   }
 
